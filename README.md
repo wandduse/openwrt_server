@@ -9,8 +9,8 @@ https://cowtransfer.com/s/da98f631c34a45
 http://www.wanuse.com/2022/01/openwrt-vps.html 
 # 
 # openwrt 登录信息
-ip+端口号：xxx.xxx.xxx.xxx:8011 
-密码：password
+ip+端口号：xxx.xxx.xxx.xxx:8011 密码：password \
+
 # 
 # 软件包空间扩容 overlay 扩容
 教程：https://www.wanuse.com/2023/01/openwrt-lede-vps-overlay.html
