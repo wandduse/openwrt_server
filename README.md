@@ -2,14 +2,14 @@
 个人博客地址：www.wanuse.com 
 # 
 # 网盘下载地址
-[ 4.9.5openwrt-x86-64-generic-squashfs-combinedimg.gz ] \
-https://cowtransfer.com/s/da98f631c34a45 
+
 # 
 # 使用教程
-http://www.wanuse.com/2022/01/openwrt-vps.html 
+
 # 
 # openwrt 登录信息
-ip+端口号：xxx.xxx.xxx.xxx:8011 密码：password \
+v4.9版本 ip+端口号：xxx.xxx.xxx.xxx:8011 密码：password \
+v5.23.2 版本 登录直接 输入ip xxx.xxx.xxx.xxx  密码：没有 \
 
 # 
 # 软件包空间扩容 overlay 扩容
