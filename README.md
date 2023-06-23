@@ -9,6 +9,6 @@ v4.9版本 ip+端口号：xxx.xxx.xxx.xxx:8011 密码：password \
  
 
 # 软件包空间扩容 overlay 扩容
-教程：https://www.wanuse.com/2023/01/openwrt-lede-vps-overlay.html
+教程：https://d.wanuse.com/7
 # 安装 NGINX  PHP  MySQL WEB环境
 教程：https://d.wanuse.com/4
