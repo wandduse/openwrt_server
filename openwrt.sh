@@ -33,7 +33,7 @@ if [[ $IS_OPENVZ ]]; then
 	echo -e "你的主机环境为 ${green}OpenVZ${none} ，不支持在此类主机部署，请更换${green}kvm${none}类主机再试"
 	exit 0
 fi
-wget https://github.com/wandduse/openwrt_server/releases/download/v6.01/openwrt-x86-64-generic-squashfs-combined.img.gz -O op.img.gz
+wget https://github.com/wandduse/openwrt_server/releases/download/v6.07/openwrt-x86-64-generic-squashfs-combined.img.gz -O op.img.gz
 
 #Check User
 if [ `id -u` -eq 0 ];then
