@@ -78,7 +78,7 @@ jobs:
       - name: 自定义插件库DDD
         uses: actions/checkout@v2
         with:
-          repository: Banwan1212/packages
+          repository: wandduse/ddd
           token: ${{ secrets.GH_TOKEN }}
           path: openwrt/ddd
       
