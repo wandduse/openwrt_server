@@ -174,5 +174,5 @@ jobs:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
           retain_days: 0
-          keep_minimum_runs: 1
+          keep_minimum_runs: 0
           delete_workflow_pattern: "ddd.yml"
