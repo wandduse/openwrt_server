@@ -1,5 +1,5 @@
 
-name: openwrt_dhcp_ddd11
+name: openwrt_dhcp_ddd
 on:
   #schedule:
     #- cron: '0 6 * * *'
