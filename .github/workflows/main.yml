@@ -1,0 +1,178 @@
+
+name: openwrt_dhcp_ddd11
+on:
+  #schedule:
+    #- cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: 'SSH connection to Actions false true'
+        required: false
+        default: 'false'
+env:
+  REPO_URL: https://github.com/openwrt/openwrt  
+  REPO_BRANCH: openwrt-23.05 
+  Firmware_Name: OpenWrt-dhcp-ddd
+  TZ: Asia/Shanghai
+permissions:
+  statuses: write
+  checks: write
+  contents: write
+  pull-requests: write
+  actions: write
+jobs:
+  build:
+    name: Build openwrt_dhcp
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 释放Ubuntu磁盘空间
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: true
+          # all of these default to true, but feel free to set to
+          # "false" if necessary for your workflow
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true 
+      
+      - name: CPU检测
+        run: |
+          echo "警告⚠"
+          echo "分配的服务器性能有限，若选择的插件过多，务必注意CPU性能！"
+          echo -e "已知CPU型号(降序): 7763，8370C，8272CL，8171M，E5-2673\n"
+          echo "--------------------------CPU信息--------------------------"
+          echo "CPU物理数量: $(cat /proc/cpuinfo | grep "physical id" | sort | uniq | wc -l)"
+          echo "CPU核心数量: $(nproc)"
+          echo -e "CPU型号信息:$(cat /proc/cpuinfo | grep -m1 name | awk -F: '{print $2}')\n"
+          echo "--------------------------内存信息--------------------------"
+          echo "已安装内存详细信息:"
+          echo -e "$(sudo lshw -short -C memory | grep GiB)\n"
+          echo "--------------------------硬盘信息--------------------------"
+          echo "硬盘数量: $(ls /dev/sd* | grep -v [1-9] | wc -l)" && df -hT
+
+      - name: 初始化系统环境
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 ccache cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libfuse-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libpython3-dev libreadline-dev libssl-dev libtool lrzsz mkisofs msmtp ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev
+          sudo -E apt-get -qq autoremove --purge
+          sudo -E apt-get -qq clean
+          sudo timedatectl set-timezone "$TZ"
+          sudo mkdir -p /workdir
+          sudo chown $USER:$GROUPS /workdir
+          
+      - name: 下载源代码
+        working-directory: /workdir
+        run: |
+          df -hT $PWD
+          git clone $REPO_URL -b $REPO_BRANCH openwrt
+          ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+
+      - name: 自定义插件库DDD
+        uses: actions/checkout@v2
+        with:
+          repository: Banwan1212/packages
+          token: ${{ secrets.GH_TOKEN }}
+          path: openwrt/ddd
+      
+      - name: 自定义配置1
+        run: |
+          cd openwrt
+          chmod +x ddd/config/1.sh
+          ddd/config/1.sh
+      - name: 更新源 #Update feeds
+        run: |
+          cd openwrt
+          ./scripts/feeds update -a         
+          ./scripts/feeds install libpam libnetsnmp liblzma
+          
+      - name: 安装源 Install feeds  更新go插件版本
+        run: |
+          cd openwrt          
+          rm -rf feeds/packages/lang/golang
+          git clone https://github.com/sbwml/packages_lang_golang -b 23.x feeds/packages/lang/golang
+          ./scripts/feeds install -a
+          
+      - name: 自定义配置2
+        run: |
+          cd openwrt
+          chmod +x ddd/config/2.sh
+          ddd/config/2.sh
+          
+      - name: SSH 连接
+        uses: P3TERX/ssh2actions@v1.0.0
+        if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+        env:
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          
+      - name: 自定义设置.config
+        run: |
+          cd openwrt
+          rm -f ./.config*
+          rm -rf ./tmp && rm -rf .config
+          touch ./.config
+          chmod +x ddd/config/3.sh
+          ddd/config/3.sh
+          sed -i 's/^[ \t]*//g' ./.config
+          make defconfig
+            
+      - name: 下载固件包
+        id: package
+        run: |
+          cd openwrt
+          make download -j16
+          find dl -size -1024c -exec ls -l {} \;
+          find dl -size -1024c -exec rm -f {} \;  
+
+      - name: 开始编译固件
+        run: |
+          cd openwrt
+          make -j$(nproc) || make -j1 || make -j1 V=s
+          echo "======================="
+          echo "Space usage:"
+          echo "======================="
+          df -h
+          echo "======================="
+          du -h --max-depth=1 ./ --exclude=build_dir --exclude=bin
+          du -h --max-depth=1 ./build_dir
+          du -h --max-depth=1 ./bin
+          echo "status=success" >> $GITHUB_OUTPUT
+          grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+          [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
+          echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV 
+
+      - name: 整理固件
+        run: |
+          cd openwrt
+          mkdir -p ./artifact/firmware
+          mkdir -p ./artifact/package
+          mkdir -p ./artifact/buildinfo
+          rm -rf $(find ./bin/targets/ -type d -name "packages")
+          cp -rf $(find ./bin/targets/ -type f) ./artifact/firmware/
+          cp -rf $(find ./bin/packages/ -type f -name "*.ipk") ./artifact/package/
+          cp -rf $(find ./bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest") ./artifact/buildinfo/
+          cp -rf ./.config ./artifact/buildinfo/
+          cp -rf ./feeds.conf.default ./artifact/buildinfo/
+
+      - name: 上传固件 推送电报   
+        run: |
+          chmod +x openwrt/ddd/config/telegram.sh
+          $GITHUB_WORKSPACE/openwrt/ddd/config/telegram.sh
+          g_l=OpenWrt23.05-X86-DHCP-LAN编译完成下载地址$(cat cowtransfer.log | grep Manage | awk '{print $3}')
+          curl "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&text=$g_l"
+      - name: 删除运行记录
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 0
+          keep_minimum_runs: 1
+          delete_workflow_pattern: "ddd.yml"
