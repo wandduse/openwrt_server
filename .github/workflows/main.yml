@@ -95,13 +95,6 @@ jobs:
           
       - name: 安装源 Install feeds  更新go插件版本
         run: |
-          cd openwrt          
-          rm -rf feeds/packages/lang/golang
-          git clone https://github.com/sbwml/packages_lang_golang -b 23.x feeds/packages/lang/golang
-          ./scripts/feeds install -a
-          
-      - name: 自定义配置2
-        run: |
           cd openwrt
           chmod +x ddd/config/2.sh
           ddd/config/2.sh
